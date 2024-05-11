@@ -83,6 +83,13 @@ class Base_method(object):
         """
         raise NotImplementedError
 
+    def _togpu(self, data_batch, device):
+
+        for i in range(len(data_batch)):
+            if isinstance(data_batch[i], torch.Tensor):
+                data_batch[i] = data_batch[i].to(device)
+        return data_batch
+
     def _predict(self, batch_data, **kwargs):
         """Forward the model.
 

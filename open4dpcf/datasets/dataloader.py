@@ -13,5 +13,9 @@ def load_data(dataname, kwargs):
     if 'nusc' in dataname:
         from .dataloader_nuscenes import load_data
         return load_data(**data_config)
+    if 'kitti_od' in dataname:
+        from .dataloader_kitti_odometry import load_data
+        return load_data(**data_config)
+
     else:
         raise ValueError(f'Dataname {dataname} is unsupported')

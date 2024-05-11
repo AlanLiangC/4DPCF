@@ -116,7 +116,7 @@ def CollateFn(batch):  # no map prior
                 for item in batch
             ]
         )
-        return (
+        return [
             filenames,
             input_points,
             input_tindex,
@@ -124,16 +124,16 @@ def CollateFn(batch):  # no map prior
             output_points,
             output_tindex,
             output_labels
-        )
+        ]
 
-    return (
+    return [
             filenames,
             input_points,
             input_tindex,
             output_origin,
             output_points,
             output_tindex,
-        )
+    ]
 
 
 # def get_argoverse2_split():

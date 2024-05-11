@@ -1,5 +1,6 @@
 import json
 from torch import optim
+from torch.optim.lr_scheduler import StepLR
 
 from timm.optim.adafactor import Adafactor
 from timm.optim.adahessian import Adahessian
@@ -158,6 +159,11 @@ def get_optim_scheduler(args, epoch, model, steps_per_epoch):
             decay_rate=args.decay_rate,
             warmup_lr_init=args.warmup_lr,
             warmup_t=args.warmup_epoch)
+    elif sched_lower == 'ori_step':
+        lr_scheduler = StepLR(
+            optimizer,
+            step_size=args.lr_epoch,
+            gamma=args.lr_decay)
     elif sched_lower == 'multistep':
         lr_scheduler = MultiStepLRScheduler(
             optimizer,

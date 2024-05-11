@@ -4,8 +4,10 @@ def create_parser():
     parser = argparse.ArgumentParser(description='4D Point Cloud Forecasting Training')
     
     # method parameters
-    parser.add_argument('--method', '-m', default='AL1', type=str,
+    parser.add_argument('--method', '-m', default=None, type=str,
                         help='Name of video prediction method to train (default: "AL1")')
+    parser.add_argument('--model_name', default=None, type=str,
+                        help='Name of video prediction model to use')
     parser.add_argument('--ex_name', '-ex', default='Debug', type=str)
 
     # Set-up parameters
@@ -29,6 +31,7 @@ def create_parser():
                         help='Whether to allow overwriting the provided config file with args')
     parser.add_argument('--res_dir', default='work_dirs', type=str)
     parser.add_argument('--test', action='store_true', default=False, help='Only performs testing')
+    parser.add_argument('--test_from', type=str, default=None, help='the checkpoint file to test from')
     parser.add_argument('--inference', '-i', action='store_true', default=False, help='Only performs inference')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--port', type=int, default=29500,
@@ -40,7 +43,7 @@ def create_parser():
     parser.add_argument('--dataname', '-d', default='nusc', type=str,
                         help='Dataset name (default: "mmnist")')
     parser.add_argument('--batch_size', '-b', default=4, type=int, help='Training batch size')
-    parser.add_argument('--num_workers', default=1, type=int)
+    parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--use_prefetcher', action='store_true', default=False,
                         help='Whether to use prefetcher for faster data loading')
     

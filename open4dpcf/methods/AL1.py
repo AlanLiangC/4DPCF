@@ -3,8 +3,9 @@ import torch
 import torch.nn as nn
 from timm.utils import AverageMeter
 from tqdm import tqdm
-from open4dpcf.models import AL1_Model
-from open4dpcf.utils import reduce_tensor
+import numpy as np
+from open4dpcf.models import model_maps
+from open4dpcf.utils import reduce_tensor, ProgressBar
 from .base_method import Base_method
 
 class AL1(Base_method):
@@ -16,12 +17,13 @@ class AL1(Base_method):
         self.model_optim, self.scheduler, self.by_epoch = self._init_optimizer(steps_per_epoch)
 
     def _build_model(self, args):
-        model = AL1_Model(args).to(self.device)
-        model = nn.DataParallel(model)
+        model = model_maps[args.model_name](args)
+        model = model.to(self.device)
         return model
 
     def _predict(self, batch_data, **kwargs):
 
+        batch_data = self._togpu(batch_data, self.device)
         input_points, input_tindex = batch_data[1:3]
         output_origin, output_points, output_tindex = batch_data[3:6]
         if self.args.dataname == "nusc":
@@ -35,8 +37,8 @@ class AL1(Base_method):
                     output_origin,
                     output_points,
                     output_tindex,
-                    output_labels=output_labels,)
-        
+                    output_labels=output_labels)
+    
         return ret_dict
 
     def train_one_epoch(self, runner, train_loader, epoch, num_updates, eta=None, **kwargs):
@@ -44,12 +46,17 @@ class AL1(Base_method):
         data_time_m = AverageMeter()
         losses_m = AverageMeter()
         self.model.train()
-        if self.by_epoch:
-            self.scheduler.step(epoch)
+        if self.args.sched != "ori_step":
+            if self.by_epoch:
+                self.scheduler.step(epoch)
         train_pbar = tqdm(train_loader) if self.rank == 0 else train_loader
 
         end = time.time()
+        # iter_mem = 0
         for batch_data in train_pbar:
+            # if iter_mem < 4170:
+            #     iter_mem += 1
+            #     continue
             data_time_m.update(time.time() - end)
             self.model_optim.zero_grad()
 
@@ -92,7 +99,60 @@ class AL1(Base_method):
 
             end = time.time()  # end for
 
+        if self.args.sched == "ori_step":
+            assert self.by_epoch
+            self.scheduler.step()
+
         if hasattr(self.model_optim, 'sync_lookahead'):
             self.model_optim.sync_lookahead()
 
         return num_updates, losses_m, eta
+    
+    def _nondist_forward_collect(self, data_loader, length=None, gather_data=False):
+        # preparation
+        results = []
+        prog_bar = ProgressBar(len(data_loader))
+        length = len(data_loader.dataset) if length is None else length
+
+        for idx, batch_data in enumerate(data_loader):
+            with torch.no_grad():
+                loss_dict, _ = self._predict(batch_data)
+                for k in loss_dict.keys():
+                    loss_dict[k] = loss_dict[k].reshape(1)
+                results.append(loss_dict)
+
+            prog_bar.update()
+            if self.args.empty_cache:
+                torch.cuda.empty_cache()
+
+        # post gather tensors
+        results_all = {}
+        for k in results[0].keys():
+            results_all[k] = np.concatenate([batch[k] for batch in results], axis=0)
+        return results_all
+
+    def vali_one_epoch(self, runner, vali_loader, **kwargs):
+        """Evaluate the model with val_loader.
+
+        Args:
+            runner: the trainer of methods.
+            val_loader: dataloader of validation.
+
+        Returns:
+            list(tensor, ...): The list of predictions and losses.
+            eval_log(str): The string of metrics.
+        """
+        self.model.eval()
+        if self.dist and self.world_size > 1:
+            results = self._dist_forward_collect(vali_loader, len(vali_loader.dataset), gather_data=False)
+        else:
+            results = self._nondist_forward_collect(vali_loader, len(vali_loader.dataset), gather_data=False)
+
+        eval_log = ""
+        for k, v in results.items():
+            v = v.mean()
+            if k != "loss":
+                eval_str = f"{k}:{v.mean()}" if len(eval_log) == 0 else f", {k}:{v.mean()}"
+                eval_log += eval_str
+
+        return results, eval_log

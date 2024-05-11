@@ -262,7 +262,7 @@ class NuscenesDataset(Dataset):
         #                output_points_tensor[output_tindex_tensor == i].numpy())
         ####################
 
-        return (
+        return [
                 (ref_scene_token, ref_sample_token, ref_sd_token, displacement),
                 input_points_tensor,
                 input_tindex_tensor,
@@ -270,7 +270,7 @@ class NuscenesDataset(Dataset):
                 output_points_tensor,
                 output_tindex_tensor,
                 output_labels_tensor
-            )
+        ]
 
 def load_data(**kawrds):
     data_root = kawrds['data_root']

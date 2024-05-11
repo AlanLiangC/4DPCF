@@ -5,4 +5,4 @@ method_maps = {
 
 }
 
-__all__ = ['method_maps', 'al1']
+__all__ = ['method_maps', 'AL1']

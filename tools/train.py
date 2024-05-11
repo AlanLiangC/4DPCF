@@ -1,14 +1,29 @@
 import sys
-sys.path.append('/home/alan/AlanLiang/Projects/3D_Reconstruction/AlanLiang/4DPCF')
+sys.path.append('/data1/liangao/Projects/3D_Restruction/4DPCF')
 
 import os
 from open4dpcf.utils import create_parser, update_config, load_config, setup_multi_processes, get_dist_info
 from open4dpcf.api import BaseExperiment
 
+import torch
+
 if __name__ == "__main__":
-    
+
     args = create_parser().parse_args()
     config = args.__dict__
+
+    ######## Custom ########
+    # args.method = 'AL1'
+    # args.ex_name = 'Ori'
+    # args.model_name = 'ori'
+    # args.dataname = 'kitti_od'
+    #######################
+
+    ########
+    if not args.dist:
+        os.environ['CUDA_VISIBLE_DEVICES']=f"{args.local_rank}"
+        torch.cuda.set_device(args.local_rank)
+    ########
 
     # method
     method = args.method
@@ -23,6 +38,13 @@ if __name__ == "__main__":
         config = update_config(config, loaded_cfg,
                                exclude_keys=['method', 'batch_size', 'val_batch_size',
                                              'drop_path', 'warmup_epoch'])
+
+    # model
+    model_name = args.model_name
+    model_config_file = os.path.join('configs/models', model_name + '.py')
+    assert os.path.exists(model_config_file)
+    config = update_config(config, load_config(model_config_file),
+                               exclude_keys=['ex_name'])
 
     # dataset
     dataname = args.dataname

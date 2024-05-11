@@ -1,14 +1,7 @@
 import torch.nn as nn
 from functools import partial
 
-import spconv
-if float(spconv.__version__[2:]) >= 2.2:
-    spconv.constants.SPCONV_USE_DIRECT_TABLE = False
-    
-try:
-    import spconv.pytorch as spconv
-except:
-    import spconv as spconv
+from .sparse_class import spconv
 
 def replace_feature(out, new_features):
     if "replace_feature" in out.__dir__():
@@ -169,7 +162,7 @@ class HEDNet(nn.Module):
         #  [472, 472, 11] -> [236, 236, 11]
         self.conv3 = spconv.SparseSequential(
             SEDLayer(64, down_kernel_size, down_stride, num_SBB, norm_fn=norm_fn, indice_key='sedlayer3'),
-            post_act_block(64, dim, 3, norm_fn=norm_fn, stride=(2, 2, 1), padding=1, indice_key='spconv3', conv_type='spconv'),
+            post_act_block(64, dim, 3, norm_fn=norm_fn, stride=(1, 2, 2), padding=1, indice_key='spconv3', conv_type='spconv'),
         )
 
         self.layers = nn.ModuleList()
@@ -179,15 +172,15 @@ class HEDNet(nn.Module):
 
         # [236, 236, 11] -> [236, 236, 5] --> [236, 236, 2]
         self.conv_out = spconv.SparseSequential(
-            spconv.SparseConv3d(dim, dim, (1, 1, 3), stride=(1, 1, 2), padding=0, bias=False, indice_key='spconv4'),
+            spconv.SparseConv3d(dim, dim, (3, 1, 1), stride=(2, 1, 1), padding=0, bias=False, indice_key='spconv4'),
             norm_fn(dim),
             nn.ReLU(),
-            spconv.SparseConv3d(dim, dim, (1, 1, 3), stride=(1, 1, 2), padding=0, bias=False, indice_key='spconv5'),
+            spconv.SparseConv3d(dim, dim, (3, 1, 1), stride=(2, 1, 1), padding=0, bias=False, indice_key='spconv5'),
             norm_fn(dim),
             nn.ReLU(),
         )
 
-        self.num_point_features = dim
+        self.out_feat_dim = dim
 
     def forward(self, voxel_features, coors, batch_size):
 

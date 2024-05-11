@@ -24,10 +24,10 @@ def worker_init(worker_id, worker_seeding='all'):
             np.random.seed(worker_info.seed % (2 ** 32 - 1))
 
 
-def create_loader(dataset, shuffle, is_training, drop_last, worker_seeding='all', **kwards):
+def create_loader(dataset, shuffle, is_training, drop_last, worker_seeding='all', **kwargs):
 
     sampler = None
-    distributed = kwards['distributed']
+    distributed = kwargs['distributed']
     if distributed and not isinstance(dataset, torch.utils.data.IterableDataset):
         if is_training:
             sampler = torch.utils.data.distributed.DistributedSampler(dataset)
@@ -39,12 +39,12 @@ def create_loader(dataset, shuffle, is_training, drop_last, worker_seeding='all'
     loader_class = torch.utils.data.DataLoader
 
     loader_args = dict(
-        batch_size=kwards['batch_size'],
+        batch_size=kwargs['batch_size'],
         shuffle=shuffle and (not isinstance(dataset, torch.utils.data.IterableDataset)) and sampler is None and is_training,
-        num_workers=kwards['num_workers'],
+        num_workers=kwargs['num_workers'],
         sampler=sampler,
         collate_fn=CollateFn,
-        pin_memory=kwards['pin_memory'],
+        pin_memory=kwargs['pin_memory'],
         drop_last=drop_last,
         worker_init_fn=partial(worker_init, worker_seeding=worker_seeding),
         persistent_workers=True

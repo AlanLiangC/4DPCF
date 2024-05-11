@@ -47,7 +47,7 @@ class BaseExperiment(object):
                 torch.cuda.set_device(self._rank)
                 print_log(f'Use distributed mode with GPUs: local rank={self._rank}')
             else:
-                device = torch.device('cuda:0')
+                device = torch.device(f'cuda:{self.args.local_rank}')
                 print_log(f'Use non-distributed mode with GPU: {device}')
         else:
             self._use_gpu = False
@@ -252,8 +252,8 @@ class BaseExperiment(object):
                 cur_lr = self.method.current_lr()
                 cur_lr = sum(cur_lr) / len(cur_lr)
                 with torch.no_grad():
+                    vali_loss = 0.0
                     # vali_loss = self.vali()
-                    vali_loss = 0
 
                 if self._rank == 0:
                     print_log('Epoch: {0}, Steps: {1} | Lr: {2:.7f} | Train Loss: {3:.7f} | Vali Loss: {4:.7f}\n'.format(
@@ -281,4 +281,33 @@ class BaseExperiment(object):
         if self._rank == 0:
             print_log('val\t '+eval_log)
 
-        return results['loss'].mean()
+        return results[self.method.loss_type].mean()
+    
+    def test(self):
+        """A testing loop of STL methods"""
+        if self.args.test:
+            if self.args.test_from is not None:
+                best_model_path = self.args.test_from
+            else:
+                best_model_path = osp.join(self.path, 'checkpoint.pth')
+            checkpoint = torch.load(best_model_path, 
+                                    map_location=lambda storage, 
+                                    loc: storage.cuda(self.args.local_rank))
+            self._load_from_state_dict(checkpoint)
+
+        self.call_hook('before_val_epoch')
+        _, loss_log = self.method.vali_one_epoch(self, self.vali_loader)
+        self.call_hook('after_val_epoch')
+
+        if self._rank == 0:
+            print_log(loss_log)
+
+        eval_log = ""
+        metrics_dict = self.method.model.metrics_dict
+        count = metrics_dict.pop('count')
+        for k, v in metrics_dict.items():
+            v = v / count
+            eval_str = f"{k}:{v.mean()}" if len(eval_log) == 0 else f", {k}:{v.mean()}"
+            eval_log += eval_str
+
+        return metrics_dict
