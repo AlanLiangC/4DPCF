@@ -14,9 +14,10 @@ if __name__ == "__main__":
 
     ######## Custom ########
     # args.method = 'AL1'
-    # args.ex_name = 'Ori'
+    # args.ex_name = 'Ori_nusc_1s'
     # args.model_name = 'ori'
-    # args.dataname = 'kitti_od'
+    # args.dataname = 'nusc'
+    # args.local_rank = 3
     #######################
 
     ########

@@ -4,7 +4,7 @@ eval_outside_grid = False
 
 with_scene = True
 scene_feat_dim = 16
-time_resolution = 5
+time_resolution = 4
 # Hash encoding
 base_resolution = 512
 max_resolution = 32768
@@ -59,7 +59,7 @@ vfe_config = dict(
 # Simvp
 stl_model_config = dict(
     model_name = 'simvp',
-    in_shape = [time_resolution,64,128,128],
+    in_shape = [2,64,128,128],
     N_S = 2,
     N_T = 4,
     hid_S = 16,
