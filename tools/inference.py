@@ -14,29 +14,32 @@ from open4dpcf.utils import (create_parser, get_dist_info, load_config,
 if __name__ == "__main__":
 
     args = create_parser().parse_args()
-    args.test = True
+    args.inference = True
+    args.dataname = 'nusc'
+    args.forecasting_time = '3s'
+    args.inference_idx = 24
+    args.local_rank = 0
+
     config = args.__dict__
 
     ######## Ori ########
     # args.method = 'AL1'
     # args.model_name = 'ori'
-    # args.dataname = 'nusc'
-    # args.forecasting_time = '3s'
-    # args.ex_name = 'Ori_nusc_mini_3s'
-    # args.test_from = 'work_dirs/Ori_nusc_mini_3s/checkpoint.pth'
-
-    # args.local_rank = 3
+    # args.ex_name = 'Ori_kitti_trainval_3s'
+    # args.test_from = 'work_dirs/Ori_kitti_trainval_3s/checkpoint.pth'
     #######################
 
     ######## LSTM ########
     args.method = 'AL1'
     args.model_name = 'lstm'
-    args.dataname = 'kitti_od'
-    args.forecasting_time = '1s'
-    args.ex_name = 'Our_kitti_trainval_1s'
-    args.test_from = 'work_dirs/Our_kitti_trainval_1s/checkpoint.pth'
+    args.ex_name = 'Our_nusc_trainval_3s'
+    args.test_from = 'work_dirs/Our_nusc_trainval_3s/checkpoint.pth'
+    #######################
 
-    args.local_rank = 3
+    ######## RayTracing ########
+    # args.method = 'AL1'
+    # args.model_name = 'rt'
+    # args.ex_name = 'RT_kitti_trainval_3s'
     #######################
 
     ########
@@ -78,4 +81,4 @@ if __name__ == "__main__":
     print('>'*35 + ' training ' + '<'*35)
     exp = BaseExperiment(args)
     rank, _ = get_dist_info()
-    exp.test()
+    exp.inference()

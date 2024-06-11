@@ -1,3 +1,2 @@
-from .points_as_gaussians import PointsAsGuaussians
-
-__all__ = ['PointsAsGuaussians']
+from .vis_object import VIS_OBJECT
+__all__ = ['VIS_OBJECT']

@@ -64,8 +64,13 @@ class Ori_Model(nn.Module):
                       output_tindex,
                       output_labels,
                       eval_within_grid=False,
-                      eval_outside_grid=False):
+                      eval_outside_grid=False,
+                      **kwargs):
         
+        # res param
+        res_output_origin = output_origin
+        res_output_points = output_points
+
         if eval_within_grid:
             inner_grid_mask = get_grid_mask(output_points, self.pc_range)
         if eval_outside_grid:
@@ -152,6 +157,7 @@ class Ori_Model(nn.Module):
             
         else:
             loss_dict = {}
+            inference_dict = {}
             if loss in ["l1", "l2", "absrel"]:
                 sigma = F.relu(output, inplace=True)
                 pred_dist, gt_dist = dvr.render_forward(
@@ -180,9 +186,12 @@ class Ori_Model(nn.Module):
 
             ret_dict["gt_dist"] = gt_dist
             ret_dict["pred_dist"] = pred_dist
-            ret_dict['pog'] = pog.detach()
-            ret_dict["sigma"] = sigma.detach()
-
+            inference_dict['pog'] = pog.detach()
+            inference_dict["sigma"] = sigma.detach()
+            inference_dict['pred_pcd'] = []
+            
+            output_origin = res_output_origin
+            output_points = res_output_points
             # iterate through the batch
             for j in range(output_points.shape[0]):  # iterate through the batch
 
@@ -196,6 +205,7 @@ class Ori_Model(nn.Module):
                         eval_within_grid,
                         eval_outside_grid
                     )
+                inference_dict['pred_pcd'].append(pred_pcds)
 
                 gt_pcds = get_clamped_output(
                         output_origin[j].cpu().numpy(),
@@ -221,7 +231,10 @@ class Ori_Model(nn.Module):
                     self.metrics_dict["l1_error"] += l1_error
                     self.metrics_dict["absrel_error"] += absrel_error
             
+            if 'inference_mode' in kwargs:
+                return inference_dict
+            
             return loss_dict, ret_dict
 
         return ret_dict
-        
+    

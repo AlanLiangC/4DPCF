@@ -14,7 +14,8 @@ class AL1(Base_method):
         self.args = args
         self.loss_type = args.data_config['metrics']
         self.model = self._build_model(args)
-        self.model_optim, self.scheduler, self.by_epoch = self._init_optimizer(steps_per_epoch)
+        if args.model_name != 'rt':
+            self.model_optim, self.scheduler, self.by_epoch = self._init_optimizer(steps_per_epoch)
 
     def _build_model(self, args):
         model = model_maps[args.model_name](args)
@@ -37,7 +38,8 @@ class AL1(Base_method):
                     output_origin,
                     output_points,
                     output_tindex,
-                    output_labels=output_labels)
+                    output_labels=output_labels,
+                    **kwargs)
     
         return ret_dict
 
@@ -115,12 +117,14 @@ class AL1(Base_method):
         length = len(data_loader.dataset) if length is None else length
 
         for idx, batch_data in enumerate(data_loader):
-            with torch.no_grad():
-                loss_dict, _ = self._predict(batch_data)
-                for k in loss_dict.keys():
-                    loss_dict[k] = loss_dict[k].reshape(1)
-                results.append(loss_dict)
-
+            try:
+                with torch.no_grad():
+                    loss_dict, _ = self._predict(batch_data)
+                    for k in loss_dict.keys():
+                        loss_dict[k] = loss_dict[k].reshape(1)
+                    results.append(loss_dict)
+            except:
+                print(idx)
             prog_bar.update()
             if self.args.empty_cache:
                 torch.cuda.empty_cache()
@@ -128,7 +132,7 @@ class AL1(Base_method):
         # post gather tensors
         results_all = {}
         for k in results[0].keys():
-            results_all[k] = np.concatenate([batch[k] for batch in results], axis=0)
+            results_all[k] = np.concatenate([batch[k].detach().cpu().numpy() for batch in results], axis=0)
         return results_all
 
     def vali_one_epoch(self, runner, vali_loader, **kwargs):
@@ -156,3 +160,28 @@ class AL1(Base_method):
                 eval_log += eval_str
 
         return results, eval_log
+
+    def inference_one_batch(self, runner, test_loader, inference_idx, **kwargs):
+        """Inference one batch with val_loader.
+
+        Args:
+            runner: the trainer of methods.
+            val_loader: dataloader of validation.
+            inference_idx: the index of batch id
+
+        Returns:
+            saved results
+        """
+        self.model.eval()
+        length = len(test_loader.dataset)
+        if inference_idx >= length:
+            inference_idx = inference_idx - length
+
+        for idx, batch_data in enumerate(test_loader):
+            if idx != inference_idx:
+                continue
+            with torch.no_grad():
+                inference_dict = self._predict(batch_data, inference_mode = True)
+                break        
+
+        return batch_data, inference_dict

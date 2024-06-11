@@ -10,7 +10,6 @@ class LSTM_Model(nn.Module):
     def __init__(self, configs, **kwargs) -> None:
         super(LSTM_Model, self).__init__()
 
-        self.batch_size = configs.batch_size
         self.loss_type = configs.data_config['metrics']
         self.input_T = configs.data_config['n_input']
         self.output_T = configs.data_config['n_output']
@@ -90,7 +89,13 @@ class LSTM_Model(nn.Module):
                       output_tindex,
                       output_labels,
                       eval_within_grid=False,
-                      eval_outside_grid=False):
+                      eval_outside_grid=False,
+                      **kwargs):
+
+        batch_size = output_origin.shape[0]
+        # res param
+        res_output_origin = output_origin
+        res_output_points = output_points
 
         if eval_within_grid:
             inner_grid_mask = get_grid_mask(output_points, self.pc_range)
@@ -99,7 +104,7 @@ class LSTM_Model(nn.Module):
 
         points_list = []
         # get render_features
-        for batch_idx in range(self.batch_size):
+        for batch_idx in range(batch_size):
             sub_input_points = input_points[batch_idx]
             sub_input_tindex = input_tindex[batch_idx]
             for t in range(self.input_T):
@@ -115,10 +120,10 @@ class LSTM_Model(nn.Module):
         
         points_all = torch.vstack(points_list)
         sparse_feats, coords = self.voxelize_layer(points_all)
-        deep_dense_feat = self.voxel_encoder(sparse_feats, coords, self.input_T * self.batch_size).dense() # 24 C 2 128 128
+        deep_dense_feat = self.voxel_encoder(sparse_feats, coords, self.input_T * batch_size).dense() # 24 C 2 128 128
         _, C, H, L, W = deep_dense_feat.shape
-        deep_dense_feat = deep_dense_feat.view(self.batch_size, self.input_T, C, H, L, W)
-        deep_dense_feat = deep_dense_feat.view(self.batch_size, self.input_T, -1, L, W) # [4, 6, 64, 128, 128]
+        deep_dense_feat = deep_dense_feat.view(batch_size, self.input_T, C, H, L, W)
+        deep_dense_feat = deep_dense_feat.view(batch_size, self.input_T, -1, L, W) # [4, 6, 64, 128, 128]
 
         # With STL
         if self.stl_model_name == 'mamba':
@@ -227,6 +232,7 @@ class LSTM_Model(nn.Module):
 
         else:
             loss_dict = {}
+            inference_dict = {}
             if loss in ["l1", "l2", "absrel"]:
                 sigma = F.relu(output, inplace=True)
                 pred_dist, gt_dist = dvr.render_forward(
@@ -255,9 +261,12 @@ class LSTM_Model(nn.Module):
 
             ret_dict["gt_dist"] = gt_dist
             ret_dict["pred_dist"] = pred_dist
-            ret_dict['pog'] = pog.detach()
-            ret_dict["sigma"] = sigma.detach()
+            inference_dict['pog'] = pog.detach()
+            inference_dict["sigma"] = sigma.detach()
+            inference_dict['pred_pcd'] = []
 
+            output_origin = res_output_origin
+            output_points = res_output_points
             # iterate through the batch
             for j in range(output_points.shape[0]):  # iterate through the batch
 
@@ -271,6 +280,7 @@ class LSTM_Model(nn.Module):
                         eval_within_grid,
                         eval_outside_grid
                     )
+                inference_dict['pred_pcd'].append(pred_pcds)
 
                 gt_pcds = get_clamped_output(
                         output_origin[j].cpu().numpy(),
@@ -295,6 +305,9 @@ class LSTM_Model(nn.Module):
                     l1_error, absrel_error = compute_ray_errors(pred_pcd, gt_pcd, torch.from_numpy(origin), output_origin.device)
                     self.metrics_dict["l1_error"] += l1_error
                     self.metrics_dict["absrel_error"] += absrel_error
+                    
+            if 'inference_mode' in kwargs:
+                return inference_dict
             
             return loss_dict, ret_dict
 

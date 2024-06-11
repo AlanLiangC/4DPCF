@@ -1,7 +1,6 @@
 # Dataset
-forecasting_time = '1s' # for nuscenes
 
-# ####### Model #######
+######## Model #######
 
 ####### Training parameters #######
 batch_size = 4

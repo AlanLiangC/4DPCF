@@ -90,6 +90,13 @@ class Base_method(object):
                 data_batch[i] = data_batch[i].to(device)
         return data_batch
 
+    def _tocpu(self, data_batch):
+
+        for i in range(len(data_batch)):
+            if isinstance(data_batch[i], torch.Tensor):
+                data_batch[i] = data_batch[i].detach().cpu().numpy()
+        return data_batch
+
     def _predict(self, batch_data, **kwargs):
         """Forward the model.
 
@@ -240,6 +247,11 @@ class Base_method(object):
             results = self._nondist_forward_collect(test_loader, gather_data=True)
 
         return results
+
+    def inference_one_batch(self, runner, test_loader, inference_idx, **kwargs):
+        
+        raise NotImplementedError
+
 
     def current_lr(self) -> Union[List[float], Dict[str, List[float]]]:
         """Get current learning rates.

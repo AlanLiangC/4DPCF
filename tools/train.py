@@ -12,11 +12,21 @@ if __name__ == "__main__":
     args = create_parser().parse_args()
     config = args.__dict__
 
-    ######## Custom ########
+    ######## Ori ########
     # args.method = 'AL1'
-    # args.ex_name = 'Ori_nusc_1s'
     # args.model_name = 'ori'
     # args.dataname = 'nusc'
+    # args.forecasting_time = '3s'
+    # args.ex_name = 'Ori_nusc_mini_3s'
+    # args.local_rank = 3
+    #######################
+
+    ######## Ours ########
+    # args.method = 'AL1'
+    # args.model_name = 'lstm'
+    # args.dataname = 'nusc'
+    # args.forecasting_time = '3s'
+    # args.ex_name = 'Our_nusc_mini_3s'
     # args.local_rank = 3
     #######################
 

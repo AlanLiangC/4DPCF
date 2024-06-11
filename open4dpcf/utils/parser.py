@@ -33,6 +33,8 @@ def create_parser():
     parser.add_argument('--test', action='store_true', default=False, help='Only performs testing')
     parser.add_argument('--test_from', type=str, default=None, help='the checkpoint file to test from')
     parser.add_argument('--inference', '-i', action='store_true', default=False, help='Only performs inference')
+    parser.add_argument('--inference_idx', type=int, default=None, help='Which batch to inference')
+
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--port', type=int, default=29500,
                         help='port only works when launcher=="slurm"')
@@ -42,6 +44,8 @@ def create_parser():
     # Dataset 
     parser.add_argument('--dataname', '-d', default='nusc', type=str,
                         help='Dataset name (default: "mmnist")')
+    parser.add_argument('--forecasting_time', default='3s', type=str, help='forecasting_time')
+
     parser.add_argument('--batch_size', '-b', default=4, type=int, help='Training batch size')
     parser.add_argument('--num_workers', default=4, type=int)
     parser.add_argument('--use_prefetcher', action='store_true', default=False,

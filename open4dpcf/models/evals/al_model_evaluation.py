@@ -241,7 +241,7 @@ def compute_ray_errors(pred_pcd, gt_pcd, origin, device, return_interpolated_pcd
     _, pred_idx = info
     v = gt_pcd - origin[None, :]
     unit_dir = v / np.sqrt((v ** 2).sum(axis=1, keepdims=True))
-    pred_pcd_interp = origin[None, :] + d_hat[pred_idx].T * unit_dir
+    pred_pcd_interp = origin[None, :] + d_hat[pred_idx].unsqueeze(dim = -1) * unit_dir
     if return_interpolated_pcd:
         return pred_pcd_interp
     clamped_gt_origin, clamped_gt_pcd, invalid_mask = clamp(gt_pcd, origin, return_invalid_mask=True)

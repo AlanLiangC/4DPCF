@@ -95,7 +95,11 @@ class BaseExperiment(object):
             for handler in logging.root.handlers[:]:
                 logging.root.removeHandler(handler)
             timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-            prefix = 'train' if (not self.args.test and not self.args.inference) else 'test'
+            prefix = 'train' 
+            if self.args.test:
+                prefix = 'test' 
+            if self.args.inference:
+                prefix = 'inference' 
             logging.basicConfig(level=logging.INFO,
                                 filename=osp.join(self.path, '{}_{}.log'.format(prefix, timestamp)),
                                 filemode='a', format='%(asctime)s - %(message)s')
@@ -173,7 +177,6 @@ class BaseExperiment(object):
             if self.args.torchscript:
                 self.method.model = torch.jit.script(self.method.model)
             self.method._init_distributed()
-
 
     def _build_hook(self):
         for k in self.args.__dict__:
@@ -254,7 +257,6 @@ class BaseExperiment(object):
                 with torch.no_grad():
                     vali_loss = 0.0
                     # vali_loss = self.vali()
-
                 if self._rank == 0:
                     print_log('Epoch: {0}, Steps: {1} | Lr: {2:.7f} | Train Loss: {3:.7f} | Vali Loss: {4:.7f}\n'.format(
                         epoch + 1, len(self.train_loader), cur_lr, loss_mean.avg, vali_loss))
@@ -285,15 +287,15 @@ class BaseExperiment(object):
     
     def test(self):
         """A testing loop of STL methods"""
-        if self.args.test:
-            if self.args.test_from is not None:
-                best_model_path = self.args.test_from
-            else:
-                best_model_path = osp.join(self.path, 'checkpoint.pth')
-            checkpoint = torch.load(best_model_path, 
-                                    map_location=lambda storage, 
-                                    loc: storage.cuda(self.args.local_rank))
-            self._load_from_state_dict(checkpoint)
+        assert self.args.test
+        if self.args.test_from is not None:
+            best_model_path = self.args.test_from
+        else:
+            best_model_path = osp.join(self.path, 'checkpoint.pth')
+        checkpoint = torch.load(best_model_path, 
+                                map_location=lambda storage, 
+                                loc: storage.cuda(self.args.local_rank))
+        self._load_from_state_dict(checkpoint)
 
         self.call_hook('before_val_epoch')
         _, loss_log = self.method.vali_one_epoch(self, self.vali_loader)
@@ -309,5 +311,63 @@ class BaseExperiment(object):
             v = v / count
             eval_str = f"{k}:{v.mean()}" if len(eval_log) == 0 else f", {k}:{v.mean()}"
             eval_log += eval_str
+        print_log(eval_log)
 
-        return metrics_dict
+        # return metrics_dict
+
+    def inference(self):
+        """A inference loop of STL methods"""
+        assert self.args.inference
+        if self.args.model_name != 'rt':
+            if isinstance(self.method.model, torch.nn.Module):
+                if self.args.test_from is not None:
+                    best_model_path = self.args.test_from
+                else:
+                    best_model_path = osp.join(self.path, 'checkpoint.pth')
+                checkpoint = torch.load(best_model_path, 
+                                        map_location=lambda storage, 
+                                        loc: storage.cuda(self.args.local_rank))
+                self._load_from_state_dict(checkpoint)
+
+        batch_data, inference_dict = self.method.inference_one_batch(self, self.vali_loader, self.args.inference_idx)
+
+        save_path = osp.join(self.path.split('/')[0], 'vis_results', self.args.dataname, self.args.forecasting_time, str(self.args.inference_idx), self.args.model_name)
+        check_dir(save_path)
+
+        # save results
+        batch_size = len(batch_data[0])
+        batch_data = self.method._tocpu(batch_data)
+        input_points, input_tindex = batch_data[1:3]
+        output_origin, output_points, output_tindex = batch_data[3:6]
+
+        # input_points
+        save_input_path = osp.join(save_path, 'input')
+        check_dir(save_input_path)
+        for batch_idx in range(batch_size):
+            for i in range(self.args.data_config['n_input']):
+                np.savetxt(osp.join(save_input_path, f'{batch_idx}_{i}.txt'), 
+                        input_points[batch_idx][input_tindex[batch_idx] == i])
+                
+        # out_gt_points
+        save_output_path = osp.join(save_path, 'gt_output')
+        check_dir(save_output_path)
+        for batch_idx in range(batch_size):
+            for i in range(self.args.data_config['n_output']):
+                np.savetxt(osp.join(save_output_path, f'{batch_idx}_{i}.txt'), 
+                        output_points[batch_idx][output_tindex[batch_idx] == i])
+
+        # out_pred_points
+        save_output_path = osp.join(save_path, 'pred_output')
+        check_dir(save_output_path)
+        pred_points = inference_dict['pred_pcd']
+        for batch_idx in range(batch_size):
+            for i in range(self.args.data_config['n_output']):
+                np.savetxt(osp.join(save_output_path, f'{batch_idx}_{i}.txt'), 
+                        pred_points[batch_idx][i].numpy())
+
+        # output origin
+        np.save(osp.join(save_path, 'output_origin.npy'), output_origin)
+        # out_pred_occ
+        if 'pog' in inference_dict:
+            occ = inference_dict['pog'].permute(0,1,4,3,2)
+            np.save(osp.join(save_path, 'occ.npy'), occ.detach().cpu().numpy())
