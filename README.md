@@ -185,7 +185,7 @@ git clone https://github.com/AlanLiangC/VIS_4DPC
 
 <video src="./docs/vis/NVS.mp4"></video>
 
-
+![NVS](./docs/vis/NVS.gif)
 
 ## License
 
