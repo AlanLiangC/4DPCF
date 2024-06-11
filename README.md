@@ -197,8 +197,8 @@ Open4DPCF is an open-source project for PCF algorithms created by researchers in
 
 ## Contribution and Contact
 
-For adding new features, looking for helps, or reporting bugs associated with `Open4DPCF`, please open a [GitHub issue](https://github.com/chengtan9907/OpenSTL/issues) and [pull request](https://github.com/chengtan9907/OpenSTL/pulls) with the tag "new features", "help wanted", or "enhancement". Feel free to contact us through email if you have any questions.
+For adding new features, looking for helps, or reporting bugs associated with `Open4DPCF`, please open a GitHub issue and pull request with the tag "new features", "help wanted", or "enhancement". Feel free to contact us through email if you have any questions.
 
-- [Alan Liang](AlanLiangC@github.io), Shenyang Institute of Automation, Chinese Academy of Sciences
+- [Alan Liang](https://alanliangc.github.io/), Shenyang Institute of Automation, Chinese Academy of Sciences
 
 <p align="right">(<a href="#top">back to top</a>)</p>
