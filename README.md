@@ -35,6 +35,10 @@ This project is an open-source initiative focused on point cloud forecasting and
 
 ## News and Updates
 
+[2024-07-26] We did some downstream experiments with SuPrNet.
+
+[2024-07-24] We added the model's experiments on the Waymo dataset.
+
 [2024-06-11] [Open4DPCF](https://github.com/AlanLiangC/4DPCF) (`Open4DPCF`) is released.
 
 
@@ -186,6 +190,28 @@ git clone https://github.com/AlanLiangC/VIS_4DPC
 <video src="./docs/vis/NVS.mp4"></video>
 
 ![NVS](./docs/vis/NVS.gif)
+
+- Drivable area prediction
+
+![nvs](./docs/vis/fvf.png)
+
+
+
+- Dense depth prediction
+
+![nvs](./docs/vis/deep.png)
+
+
+
+- Motion plan
+
+![nvs](./docs/vis/MP.png)
+
+
+
+- Result on ST3DCNN
+
+![nvs](./docs/vis/ST3DCNN.png)
 
 ## License
 
